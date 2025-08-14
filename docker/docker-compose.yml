@@ -1,0 +1,89 @@
+name: ${PROJECT_NAME:-bytebot}
+
+services:
+  bytebot-desktop:
+    container_name: "${PROJECT_NAME:-bytebot}_desktop"
+    build:
+      context: ../packages/
+      dockerfile: bytebotd/Dockerfile
+    image: ghcr.io/bytebot-ai/bytebot-desktop:edge
+    shm_size: "2g"
+    restart: unless-stopped
+    hostname: "${PROJECT_NAME:-bytebot}_computer"
+    privileged: true
+    ports:
+      - "9990:9990"
+    environment:
+      - DISPLAY=:0
+    networks:
+      bytebot-network-2:
+        ipv4_address: 172.29.0.10
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: "${PROJECT_NAME:-bytebot}_postgres"
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_USER=postgres
+      - POSTGRES_DB=bytebotdb
+    networks:
+      bytebot-network-2:
+        ipv4_address: 172.29.0.11
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  bytebot-agent:
+    build:
+      context: ../packages/
+      dockerfile: bytebot-agent/Dockerfile
+    image: ghcr.io/bytebot-ai/bytebot-agent:edge
+    container_name: "${PROJECT_NAME:-bytebot}_agent"
+    restart: unless-stopped
+    ports:
+      - "9991:9991"
+    environment:
+      - DATABASE_URL=${DATABASE_URL:-postgresql://postgres:postgres@${PROJECT_NAME:-bytebot}_postgres:5432/bytebotdb}
+      - BYTEBOT_DESKTOP_BASE_URL=${BYTEBOT_DESKTOP_BASE_URL:-http://${PROJECT_NAME:-bytebot}_desktop:9990}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+    depends_on:
+      - postgres
+    networks:
+      bytebot-network-2:
+        ipv4_address: 172.29.0.12
+
+  bytebot-ui:
+    build:
+      context: ../packages/
+      dockerfile: bytebot-ui/Dockerfile
+      args:
+        - BYTEBOT_AGENT_BASE_URL=${BYTEBOT_AGENT_BASE_URL:-http://${PROJECT_NAME:-bytebot}_agent:9991}
+        - BYTEBOT_DESKTOP_VNC_URL=${BYTEBOT_DESKTOP_VNC_URL:-http://${PROJECT_NAME:-bytebot}_desktop:9990/websockify}
+    image: ghcr.io/bytebot-ai/bytebot-ui:edge
+    container_name: "${PROJECT_NAME:-bytebot}_ui"
+    restart: unless-stopped
+    ports:
+      - "9992:9992"
+    environment:
+      - NODE_ENV=production
+      - BYTEBOT_AGENT_BASE_URL=${BYTEBOT_AGENT_BASE_URL:-http://${PROJECT_NAME:-bytebot}_agent:9991}
+      - BYTEBOT_DESKTOP_VNC_URL=${BYTEBOT_DESKTOP_VNC_URL:-http://${PROJECT_NAME:-bytebot}_desktop:9990/websockify}
+    depends_on:
+      - bytebot-agent # need to add / ready reastart otherwise
+    networks:
+      bytebot-network-2:
+        ipv4_address: 172.29.0.13
+
+networks:
+  bytebot-network-2:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.29.0.0/16
+
+volumes:
+  postgres_data:
