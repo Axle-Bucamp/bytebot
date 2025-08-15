@@ -80,10 +80,10 @@ export class VllmService implements BytebotAgentService {
 
   constructor(private readonly configService: ConfigService) {
     this.apiBase = this.configService.get<string>('VLLM_API_BASE') || 'https://kitty.guidry-cloud.com';
-    this.apiKey = this.configService.get<string>('VLLM_API_KEY');
+    this.apiKey = this.configService.get<string>('VLLM_API_KEY') || 'dev';
     
-    if (!this.apiKey) {
-      this.logger.warn('VLLM_API_KEY is not set. VLLM service may not work properly.');
+    if (this.apiKey === 'dev') {
+      this.logger.warn('You should add an API key proxy or setting');
     }
   }
 

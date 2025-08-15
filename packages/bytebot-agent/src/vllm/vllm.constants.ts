@@ -3,15 +3,15 @@ import { BytebotAgentModel } from '../agent/agent.types';
 export const VLLM_MODELS: BytebotAgentModel[] = [
   {
     provider: 'vllm',
-    name: 'kitty',
+    name: 'unsloth/Qwen3-8B-unsloth-bnb-4bit', // make a better var management or user input model
     title: 'VLLM Kitty',
-    contextWindow: 10000,
+    contextWindow: 8000,
   },
   {
     provider: 'proxy',
-    name: 'kitty',
+    name: 'unsloth/Qwen3-8B-unsloth-bnb-4bit',
     title: 'VLLM Kitty (Proxy)',
-    contextWindow: 10000,
+    contextWindow: 8000,
   },
 ];
 
